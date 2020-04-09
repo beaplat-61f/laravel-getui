@@ -956,6 +956,12 @@ class ActionChain extends PBMessage
     return $this->_get_arr_size("381");
   }
 }
+class NotifyInfo_Type extends PBEnum
+{
+    const _payload  = 0;
+    const _intent  = 1;
+    const _url  = 2;
+}
 class NotifyInfo extends PBMessage
 {
   var $wired_type = PBMessage::WIRED_LENGTH_DELIMITED;

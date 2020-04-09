@@ -1,12 +1,15 @@
 <?php
 
 namespace ShaoZeMing\GeTui;
+use Illuminate\Config\Repository;
 use Illuminate\Support\Collection;
 
 //use Illuminate\Support\Facades\Log;
 
 
 require_once dirname(__FILE__) . '/getui/IGt.Push.php';
+require_once(dirname(__FILE__) . '/getui/igetui/template/notify/IGt.Notify.php');
+require_once(dirname(__FILE__) . '/getui/igetui/IGt.Req.php');
 
 class GeTuiService implements PushInterface
 {
@@ -31,14 +34,14 @@ class GeTuiService implements PushInterface
     public function __construct(array $config = null)
     {
         if(!$config){
-           $config =  include(__DIR__.'/config/getui.php');
+            $config =  include(__DIR__.'/config/getui.php');
         }
 
-        $this->config = $config;
+        $this->config = new Repository($config);
 
-        $appEnv = $this->config["app_env"];
-        $client = $this->config["default_client"];
-        $config = $this->config[$appEnv][$client];
+        $appEnv = $this->config->get("app_env");
+        $client = $this->config->get("default_client");
+        $config = $this->config->get("$appEnv.$client");
         $this->obj = new \IGeTui($config['gt_domainurl'], $config['gt_appkey'], $config['gt_mastersecret']);
         $this->gt_appid = $config['gt_appid'];
         $this->gt_appkey = $config['gt_appkey'];
@@ -50,11 +53,11 @@ class GeTuiService implements PushInterface
 
     public function toClient($client = null)
     {
-        $appEnv = $this->config["app_env"];
+        $appEnv = $this->config->get("app_env");
         if (empty($client)) {
-            $client = $this->config["default_client"];
+            $client = $this->config->get("default_client");
         }
-        $config = $this->config[$appEnv][$client];
+        $config = $this->config->get("$appEnv.$client");
         $this->obj = new \IGeTui($config['gt_domainurl'], $config['gt_appkey'], $config['gt_mastersecret']);
         $this->gt_appid = $config['gt_appid'];
         $this->gt_appkey = $config['gt_appkey'];
@@ -388,7 +391,19 @@ class GeTuiService implements PushInterface
         $template->set_transmissionContent($transContent);//透传内容
         //$template->set_duration(BEGINTIME,ENDTIME); //设置ANDROID客户端在此时间区间内展示消息
 
-        //APN高级推送
+        $transContentArr = json_decode($transContent, true);
+        $payload = $transContentArr['payload'] ?? '';
+
+        $intent = 'intent:#Intent;action=android.intent.action.oppopush;launchFlags=0x14000000;component=io.dcloud.H59567D79/io.dcloud.PandoraEntry;S.UP-OL-SU=true;S.title='.$title.';S.content='.$content.';S.payload='.$payload.';end';
+        $notify = new \IGtNotify();
+        $notify->set_title($title);
+        $notify->set_content($content);
+        $notify->set_intent($intent);
+        $notify->set_type(\NotifyInfo_type::_intent);
+
+        $template->set3rdNotifyInfo($notify);
+
+        // APN高级推送
         $apn = new \IGtAPNPayload();
         $alertmsg = new \DictionaryAlertMsg();
         $alertmsg->body = $content;
@@ -396,7 +411,8 @@ class GeTuiService implements PushInterface
         $alertmsg->locKey = "LocKey";
         $alertmsg->locArgs = array("locargs");
         $alertmsg->launchImage = "launchimage";
-//        IOS8.2 支持
+
+        // IOS8.2 支持
         $alertmsg->title = $title;
         $alertmsg->titleLocKey = "TitleLocKey";
         $alertmsg->titleLocArgs = array("TitleLocArg");
@@ -408,6 +424,7 @@ class GeTuiService implements PushInterface
         $apn->contentAvailable = 1;
         $apn->category = "ACTIONABLE";
         $template->set_apnInfo($apn);
+
         return $template;
     }
 
