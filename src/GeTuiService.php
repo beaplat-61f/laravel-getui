@@ -448,4 +448,18 @@ class GeTuiService implements PushInterface
     }
 
 
+    private function getUserStatus($cid)
+    {
+        $appEnv = $this->config->get("app_env");
+        $client = $this->config->get("default_client");
+        $config = $this->config->get("$appEnv.$client");
+        $igt = new \IGeTui($config['gt_domainurl'], $config['gt_appkey'], $config['gt_mastersecret']);
+        return $igt->getClientIdStatus($config['gt_appid'], $cid);
+    }
+
+    function checkCidVaild($cid)
+    {
+        $res = $this->getUserStatus($cid);
+        return isset($res['result']) && (in_array($res['result'], ['Offline', 'Online']));
+    }
 }
